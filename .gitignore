@@ -1,5 +1,18 @@
+# Environment variables and secrets
 .env
+.env.*
+!.env.example
+
+# Python cache and compiled files
 __pycache__/
+*.py[cod]
+*.pyc
+
+# Virtual environments
+.venv/
+venv/
+
+# TripWise runtime files
 logs/
 data/memory.json
 exports/
