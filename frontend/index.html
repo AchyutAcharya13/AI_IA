@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TripWise</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sea:#0F3D45;      /* deep Arabian Sea ink: text, structure */
+  --sea-2:#2D5F67;
+  --mist:#EEF3F2;     /* page */
+  --paper:#FFFFFF;
+  --line:#D5E0DE;
+  --muted:#5B7378;
+  --marigold:#E9A23B; /* the one accent */
+  --marigold-soft:#FBEBD0;
+  --ok:#2F7D57; --ok-soft:#DDF0E5;
+  --over:#C2412D; --over-soft:#F8E0DB;
+  --think:#4A5BA8; --think-soft:#E5E8F6;
+  --font-head:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --font-body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --sea:#DCEBEA; --sea-2:#A9C6C8; --mist:#0B1D21; --paper:#11282D; --line:#21434A; --muted:#8FAAAE;
+  --marigold:#F0B354; --marigold-soft:#3A2D16; --ok:#5FC08E; --ok-soft:#163327; --over:#F07A66; --over-soft:#3B1B16;
+  --think:#9AA8EC; --think-soft:#1E2442;}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--mist);color:var(--sea);font:16px/1.55 var(--font-body)}
+h1,h2,h3{font-family:var(--font-head);margin:0;line-height:1.15}
+button,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--marigold);outline-offset:2px}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+
+/* top bar */
+.bar{display:flex;align-items:center;gap:8px 16px;padding:18px 0;flex-wrap:wrap}
+.mark{font:800 22px/1 var(--font-head);letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
+.mark svg{flex:none}
+.conn{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.conn.ok .dot{background:var(--ok)} .conn.bad .dot{background:var(--over)}
+
+/* setup banner */
+.setup{display:none;background:var(--over-soft);border:1px solid var(--over);border-radius:10px;padding:14px 18px;margin-bottom:18px}
+.setup.show{display:block}
+.setup h2{font-size:18px;color:var(--over);margin-bottom:6px}
+.setup ol{margin:6px 0 0;padding-left:20px} .setup code{font:14px var(--font-mono);background:var(--paper);padding:1px 6px;border-radius:4px}
+
+/* goal */
+.ask{padding:8px 0 22px}
+.ask label{display:block;font:700 clamp(28px,4.2vw,46px)/1.05 var(--font-head);letter-spacing:-.025em;margin-bottom:14px;max-width:18ch}
+.goalbox{display:flex;gap:12px;align-items:stretch;flex-wrap:wrap}
+textarea{flex:1 1 520px;min-height:64px;resize:vertical;border:2px solid var(--line);background:var(--paper);border-radius:12px;padding:14px 16px;font-size:18px;line-height:1.45}
+textarea:focus{border-color:var(--sea-2);outline:none}
+.go{flex:0 0 auto;border:0;border-radius:12px;padding:0 26px;min-height:64px;background:var(--sea);color:var(--paper);font:700 18px var(--font-head);cursor:pointer}
+.go:hover{background:var(--sea-2)} .go:disabled{opacity:.55;cursor:progress}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center;font-size:14px;color:var(--muted)}
+.preset{border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:5px 12px;cursor:pointer;color:var(--sea);font-size:14px}
+.preset:hover{border-color:var(--sea-2)}
+
+/* ReAct cycle (a real sequence) */
+.cycle{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin:4px 0 24px;border:1px solid var(--line);border-radius:12px;background:var(--paper);overflow:hidden}
+.phase{padding:10px 14px;font-size:14px;color:var(--muted);border-right:1px solid var(--line);display:flex;gap:8px;align-items:baseline;transition:background .25s,color .25s}
+.phase:last-child{border-right:0}
+.phase b{font:700 13px var(--font-mono);color:var(--muted)}
+.phase.on{background:var(--marigold-soft);color:var(--sea)} .phase.on b{color:var(--sea)}
+.phase.done{color:var(--sea)}
+
+/* main grid */
+.grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:22px;align-items:start}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.panel>h2{font-size:20px;margin-bottom:4px}
+.hint{font-size:14px;color:var(--muted);margin:0 0 14px}
+.counts{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-bottom:12px}
+.counts strong{color:var(--sea);font:700 16px var(--font-head)}
+
+/* timeline */
+.trace{position:relative;max-height:640px;overflow:auto;padding-right:4px}
+.ev{position:relative;padding:0 0 14px 26px}
+.ev::before{content:"";position:absolute;left:7px;top:18px;bottom:0;width:2px;background:var(--line)}
+.ev:last-child::before{display:none}
+.ev .pin{position:absolute;left:0;top:5px;width:16px;height:16px;border-radius:50%;border:3px solid var(--paper);box-shadow:0 0 0 1px var(--line)}
+.ev .head{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:14px}
+.ev .kind{font-weight:700}
+.ev .tool{font:500 13px var(--font-mono);background:var(--mist);border-radius:5px;padding:1px 7px}
+.ev .time{margin-left:auto;color:var(--muted);font:12px var(--font-mono)}
+.ev .body{margin-top:4px;font-size:14.5px;white-space:pre-wrap;word-break:break-word}
+.ev .code{font:13px/1.5 var(--font-mono);background:var(--mist);border-radius:8px;padding:8px 10px;margin-top:6px;white-space:pre-wrap;word-break:break-word}
+.ev details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-top:4px}
+.ev.goal .pin{background:var(--sea)} .ev.thought .pin{background:var(--think)}
+.ev.action .pin{background:var(--marigold)} .ev.observation .pin{background:var(--sea-2)}
+.ev.final .pin{background:var(--ok)} .ev.error .pin{background:var(--over)}
+.ev.thought .body{background:var(--think-soft);border-radius:8px;padding:8px 10px}
+.ev.error .body{color:var(--over);font-weight:700}
+.ev.verdict-ok .code{background:var(--ok-soft);color:var(--ok);font-weight:500}
+.ev.verdict-over .code{background:var(--over-soft);color:var(--over);font-weight:500}
+.empty{color:var(--muted);font-size:15px;padding:18px 0}
+
+/* budget track: the signature element */
+.budget{margin:4px 0 20px;padding:16px 18px;border-radius:12px;background:var(--mist)}
+.budget h3{font-size:16px;margin-bottom:2px}
+.budget p{margin:0 0 10px;font-size:14px;color:var(--muted)}
+.track{position:relative;padding-top:26px}
+.attempt{display:grid;grid-template-columns:76px 1fr 104px;gap:10px;align-items:center;font-size:14px;margin:8px 0}
+.attempt .lbl{color:var(--muted);white-space:nowrap}
+.attempt .rail{position:relative;height:18px;background:var(--paper);border-radius:4px}
+.attempt .fill{position:absolute;inset:0 auto 0 0;border-radius:4px;width:0;transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.attempt.ok .fill{background:var(--ok)} .attempt.over .fill{background:var(--over)}
+.attempt .amt{font:500 14px var(--font-mono);text-align:right}
+.attempt.ok .amt{color:var(--ok)} .attempt.over .amt{color:var(--over)}
+.limit{position:absolute;top:-4px;bottom:-4px;width:0;border-left:2px dashed var(--sea)}
+.limit span{position:absolute;top:-22px;left:-40px;width:80px;text-align:center;font:500 12px var(--font-mono);color:var(--sea)}
+.rails{position:relative;margin-left:86px;margin-right:114px;height:0}
+
+/* itinerary */
+.itin{font-size:16px;line-height:1.6;max-width:72ch}
+.itin h1{font-size:24px;margin:6px 0 8px}
+.itin h2{font-size:20px;margin:18px 0 6px;padding-left:12px;border-left:4px solid var(--marigold)}
+.itin h3{font-size:17px;margin:14px 0 4px}
+.itin p{margin:6px 0}
+.itin ul,.itin ol{margin:6px 0;padding-left:22px}
+.itin table{border-collapse:collapse;width:100%;margin:12px 0;font-size:15px}
+.itin th,.itin td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+.itin th{font-family:var(--font-head);border-bottom:2px solid var(--sea)}
+.itin tr:last-child td{font-weight:700}
+.itin hr{border:0;border-top:1px solid var(--line);margin:16px 0}
+.itin a{color:var(--sea-2)}
+.loading{display:flex;gap:10px;align-items:center;color:var(--muted)}
+.spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--marigold);border-radius:50%;animation:s 0.9s linear infinite}
+@keyframes s{to{transform:rotate(1turn)}}
+
+/* comparison */
+.compare{margin:22px 0}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:12px}
+.side{padding:16px 18px}
+.side+.side{border-left:1px solid var(--line);background:var(--mist)}
+.side h3{font-size:17px;margin-bottom:10px}
+.side dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:15px}
+.side dt{color:var(--muted)} .side dd{margin:0}
+.pill{display:inline-block;border-radius:99px;padding:1px 10px;font-size:13px;font-weight:700}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.over{background:var(--over-soft);color:var(--over)}
+
+/* drawers */
+.drawers{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:40px}
+.drawers details{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.drawers summary{cursor:pointer;font:700 16px var(--font-head)}
+.drawers pre{font:12.5px/1.5 var(--font-mono);white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;background:var(--mist);border-radius:8px;padding:10px;margin:10px 0 6px}
+.linkbtn{border:0;background:none;padding:0;color:var(--sea-2);text-decoration:underline;cursor:pointer;font-size:14px;margin-right:14px}
+footer{color:var(--muted);font-size:13px;padding:0 0 30px}
+
+@media (max-width:900px){
+  .grid,.drawers{grid-template-columns:1fr}
+  .cycle{grid-template-columns:1fr 1fr}
+  .phase{border-bottom:1px solid var(--line)}
+  .vs{grid-template-columns:1fr} .side+.side{border-left:0;border-top:1px solid var(--line)}
+}
+@media (max-width:520px){ .wrap{padding:0 16px} .go{width:100%} .attempt{grid-template-columns:72px 1fr 88px} .rails{margin-left:82px;margin-right:98px} .conn{margin-left:0;width:100%} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <div class="mark">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="13" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15 5 L19 15 L15 25 L11 15 Z" fill="#E9A23B"/><circle cx="15" cy="15" r="2" fill="currentColor"/></svg>
+      TripWise
+    </div>
+    <div class="conn" id="conn" role="status"><span class="dot"></span><span id="connText">Connecting to the agent server…</span></div>
+  </header>
+
+  <section class="setup" id="setup" aria-live="polite">
+    <h2 id="setupTitle">The agent server is not reachable</h2>
+    <div id="setupBody"></div>
+  </section>
+
+  <section class="ask">
+    <label for="goal">Where to, and on what budget?</label>
+    <div class="goalbox">
+      <textarea id="goal" rows="2">Plan a 3-day Goa trip for 2 people under Rs 25000</textarea>
+      <button class="go" id="run">Plan my trip</button>
+    </div>
+    <div class="presets">Try a goal:
+      <button class="preset" data-g="Plan a 3-day Goa trip for 2 people under Rs 25000">3 days, 2 people, Rs 25,000</button>
+      <button class="preset" data-g="Plan a 3-day Goa trip for 2 people under Rs 15000">Tight budget, Rs 15,000</button>
+      <button class="preset" data-g="Plan a 2-day Goa trip for 1 person under Rs 8000. I like beaches and cheap local food. Start date 2026-11-14.">Solo trip with a calendar entry</button>
+    </div>
+  </section>
+
+  <ol class="cycle" id="cycle" aria-label="Agent loop">
+    <li class="phase" data-p="plan"><b>1</b> Plan</li>
+    <li class="phase" data-p="act"><b>2</b> Call a tool</li>
+    <li class="phase" data-p="observe"><b>3</b> Read the result</li>
+    <li class="phase" data-p="check"><b>4</b> Check the budget</li>
+    <li class="phase" data-p="answer"><b>5</b> Write the itinerary</li>
+  </ol>
+
+  <div class="grid">
+    <section class="panel" aria-labelledby="tTitle">
+      <h2 id="tTitle">How the agent worked it out</h2>
+      <p class="hint">Every thought, tool call and result, as it happens.</p>
+      <div class="counts" id="counts" hidden>
+        <span><strong id="nSteps">0</strong> reasoning steps</span>
+        <span><strong id="nTools">0</strong> tool calls</span>
+        <span><strong id="nChecks">0</strong> budget checks</span>
+        <span><strong id="nSecs">0</strong> seconds</span>
+      </div>
+      <div class="trace" id="trace"><p class="empty">Press <b>Plan my trip</b> and the agent's steps will appear here.</p></div>
+    </section>
+
+    <section class="panel" aria-labelledby="iTitle">
+      <h2 id="iTitle">Your itinerary</h2>
+      <div class="budget" id="budget" hidden>
+        <h3>Budget checks</h3>
+        <p id="budgetNote">Each bar is one cost estimate the agent tested against your budget.</p>
+        <div class="track" id="track"></div>
+      </div>
+      <div class="itin" id="itin"><p class="empty">The finished day-by-day plan and cost table will appear here.</p></div>
+    </section>
+  </div>
+
+  <section class="panel compare" aria-labelledby="cTitle">
+    <h2 id="cTitle">Rule-based agent vs TripWise</h2>
+    <p class="hint">The same goal, given to a classical agent with fixed rules and to the LLM agent. Running TripWise runs both.</p>
+    <div class="vs">
+      <div class="side">
+        <h3>Classical rule-based agent</h3>
+        <dl>
+          <dt>How it decides</dt><dd id="bRule">Fixed rate per person per day</dd>
+          <dt>Estimate</dt><dd id="bTotal">Not run yet</dd>
+          <dt>Outcome</dt><dd id="bVerdict">–</dd>
+          <dt>Tool calls</dt><dd>0</dd>
+          <dt>Can re-plan</dt><dd>No</dd>
+          <dt>Memory</dt><dd>None</dd>
+        </dl>
+      </div>
+      <div class="side">
+        <h3>TripWise (Gemini + tools)</h3>
+        <dl>
+          <dt>How it decides</dt><dd>Reasons step by step with live tools</dd>
+          <dt>Estimate</dt><dd id="mTotal">Not run yet</dd>
+          <dt>Outcome</dt><dd id="mVerdict">–</dd>
+          <dt>Tool calls</dt><dd id="mTools">–</dd>
+          <dt>Can re-plan</dt><dd id="mReplan">Yes, when over budget</dd>
+          <dt>Memory</dt><dd>Conversation context + memory.json</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <div class="drawers">
+    <details id="logD"><summary>Raw interaction log</summary>
+      <pre id="logOut">Open to load logs/agent_trace.log</pre>
+      <button class="linkbtn" id="logRefresh">Reload log</button>
+    </details>
+    <details id="memD"><summary>Long-term memory</summary>
+      <pre id="memOut">Open to load data/memory.json</pre>
+      <button class="linkbtn" id="memRefresh">Reload memory</button>
+      <button class="linkbtn" id="memClear">Clear memory</button>
+    </details>
+  </div>
+  <footer>TripWise · IA II Agentic AI project · Gemini function calling, ReAct loop, Flask backend</footer>
+</div>
+
+<script>
+const API = location.protocol === 'file:' ? 'http://127.0.0.1:5000' : '';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const rs = n => 'Rs ' + Math.round(Number(n)).toLocaleString('en-IN');
+const TOOL_LABEL = {web_search:'Searched the web', calculator:'Calculated', read_document:'Read a file',
+  check_budget:'Checked the budget', save_memory:'Saved to memory', create_calendar_file:'Created a calendar entry'};
+
+/* ---------- connection ---------- */
+let ready = false;
+function setup(title, html){ $('#setup').classList.add('show'); $('#setupTitle').textContent = title; $('#setupBody').innerHTML = html; }
+function conn(state, text){ const c = $('#conn'); c.className = 'conn ' + state; $('#connText').textContent = text; }
+const START_STEPS = `<ol><li>Open a terminal in the <code>tripwise</code> folder.</li>
+  <li>Run <code>pip install -r requirements.txt</code> (first time only).</li>
+  <li>Run <code>python run.py</code> and keep that window open.</li>
+  <li>Open <code>http://127.0.0.1:5000</code> in your browser. Don't double-click <code>index.html</code>.</li></ol>`;
+
+async function checkServer(){
+  try{
+    const s = await (await fetch(API + '/api/status')).json();
+    if(s.key === 'set'){ ready = true; $('#setup').classList.remove('show'); conn('ok', `Connected · ${s.model} · ${s.tools.length} tools`); }
+    else{
+      conn('bad', s.key === 'invalid' ? 'Connected, but Gemini rejected the key' : 'Connected, but no Gemini key');
+      const titles = {missing:'Add your Gemini API key', placeholder:'Replace the placeholder Gemini key', invalid:'Gemini rejected your API key'};
+      setup(titles[s.key] || 'Check your Gemini API key',
+        (s.key === 'invalid' ? `<p>${esc(s.key_message)}</p>` : '') +
+        `<ol><li>Get a free key at <code>aistudio.google.com/apikey</code> (Create API key). It starts with <code>AIza</code>.</li>
+         <li>Open the <code>.env</code> file in the <code>tripwise</code> folder and set <code>GEMINI_API_KEY=your_key</code> (no quotes or spaces).</li>
+         <li>Stop the server with Ctrl+C, run <code>python run.py</code> again, then reload this page.</li></ol>`);
+    }
+  }catch(e){
+    ready = false; conn('bad', 'Agent server not running');
+    setup(location.protocol === 'file:' ? 'This page was opened as a file, and the server is not running' : 'The agent server is not running', START_STEPS);
+  }
+}
+checkServer();
+
+/* ---------- markdown (headings, lists, tables, bold/italic, links) ---------- */
+function inline(t){ return t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<em>$2</em>')
+  .replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\[([^\]]+)\]\((https?:[^)\s]+|\/exports\/[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>'); }
+function md(src){
+  const L = esc(src).split('\n'); let h = '', i = 0;
+  while(i < L.length){
+    const l = L[i];
+    if(/^\s*\|/.test(l)){
+      const rows = []; while(i < L.length && /^\s*\|/.test(L[i])) rows.push(L[i++]);
+      const cells = rows.filter(r => !/^\s*\|?[\s:|-]+\|?\s*$/.test(r)).map(r => r.trim().replace(/^\||\|$/g,'').split('|').map(c => inline(c.trim())));
+      h += '<table><thead><tr>' + cells[0].map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>' +
+           cells.slice(1).map(r => '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>').join('') + '</tbody></table>';
+      continue;
+    }
+    if(/^\s*[-*+] /.test(l)){ h += '<ul>'; while(i < L.length && /^\s*[-*+] /.test(L[i])) h += `<li>${inline(L[i++].replace(/^\s*[-*+] /,''))}</li>`; h += '</ul>'; continue; }
+    if(/^\s*\d+[.)] /.test(l)){ h += '<ol>'; while(i < L.length && /^\s*\d+[.)] /.test(L[i])) h += `<li>${inline(L[i++].replace(/^\s*\d+[.)] /,''))}</li>`; h += '</ol>'; continue; }
+    const m = l.match(/^(#{1,4})\s+(.*)/);
+    if(m){ const n = Math.min(m[1].length, 3); h += `<h${n}>${inline(m[2])}</h${n}>`; i++; continue; }
+    if(/^\s*(---|\*\*\*)\s*$/.test(l)){ h += '<hr>'; i++; continue; }
+    if(l.trim()) h += `<p>${inline(l)}</p>`;
+    i++;
+  }
+  return h;
+}
+
+/* ---------- live UI state ---------- */
+let S;
+function reset(){
+  S = {steps:0, tools:0, checks:[], pending:{}, t0:Date.now(), final:null};
+  $('#trace').innerHTML = ''; $('#counts').hidden = false; $('#budget').hidden = true; $('#track').innerHTML = '';
+  ['nSteps','nTools','nChecks','nSecs'].forEach(id => $('#'+id).textContent = '0');
+  $('#itin').innerHTML = '<p class="loading"><span class="spin"></span>The agent is planning your trip…</p>';
+  $('#mTotal').textContent = 'Running…'; $('#mVerdict').textContent = '–'; $('#mTools').textContent = '–';
+  document.querySelectorAll('.phase').forEach(p => p.classList.remove('on','done'));
+}
+function phase(p){
+  let seen = true;
+  document.querySelectorAll('.phase').forEach(el => {
+    if(el.dataset.p === p){ el.classList.add('on'); el.classList.remove('done'); seen = false; }
+    else { el.classList.remove('on'); if(seen) el.classList.add('done'); }
+  });
+}
+function counts(){ $('#nSteps').textContent = S.steps; $('#nTools').textContent = S.tools; $('#nChecks').textContent = S.checks.length;
+  $('#nSecs').textContent = ((Date.now() - S.t0)/1000).toFixed(0); }
+
+function addEv(cls, kind, {tool, time, body, code, fold} = {}){
+  const d = document.createElement('div'); d.className = 'ev ' + cls;
+  let inner = `<span class="pin"></span><div class="head"><span class="kind">${esc(kind)}</span>${tool ? `<span class="tool">${esc(tool)}</span>` : ''}<span class="time">${esc(time || '')}</span></div>`;
+  if(body) inner += `<div class="body">${esc(body)}</div>`;
+  if(code){ inner += fold && code.length > 260
+      ? `<div class="code">${esc(code.slice(0,220))}…</div><details><summary>Show full result</summary><div class="code">${esc(code)}</div></details>`
+      : `<div class="code">${esc(code)}</div>`; }
+  d.innerHTML = inner; $('#trace').appendChild(d); $('#trace').scrollTop = 1e9; return d;
+}
+
+function drawBudget(){
+  const c = S.checks; if(!c.length) return;
+  $('#budget').hidden = false;
+  const budget = c[c.length-1].budget, max = Math.max(budget, ...c.map(x => x.total)) * 1.08;
+  const pct = v => (v / max * 100).toFixed(2) + '%';
+  $('#track').innerHTML = `<div class="rails"><div class="limit" style="left:${pct(budget)};height:${c.length*34}px"><span>${rs(budget)}</span></div></div>` +
+    c.map((x,i) => `<div class="attempt ${x.ok ? 'ok':'over'}"><span class="lbl">Estimate ${i+1}</span><span class="rail"><span class="fill" data-w="${pct(x.total)}"></span></span><span class="amt">${rs(x.total)}</span></div>`).join('');
+  requestAnimationFrame(() => document.querySelectorAll('#track .fill').forEach(f => f.style.width = f.dataset.w));
+  const overs = c.filter(x => !x.ok).length, last = c[c.length-1];
+  $('#budgetNote').textContent = overs && last.ok ? `The first plan was over budget, so the agent revised it ${overs} time${overs>1?'s':''} until it fit.`
+    : last.ok ? 'The plan fit the budget on the first check.' : 'The latest estimate is still over budget.';
+}
+
+function handle(ev){
+  if(ev.step && ev.step > S.steps) S.steps = ev.step;
+  switch(ev.type){
+    case 'goal': phase('plan'); addEv('goal', 'Goal received', {time:ev.t, body:ev.text, code: ev.memory && ev.memory !== '{}' ? 'Remembered from earlier: ' + ev.memory : ''}); break;
+    case 'thought': phase(S.tools ? 'observe' : 'plan'); addEv('thought', S.tools ? 'Reasoning' : 'Plan', {time:ev.t, body:ev.text}); break;
+    case 'action':
+      S.tools++; phase(ev.tool === 'check_budget' ? 'check' : 'act');
+      if(ev.tool === 'check_budget') S.pending[ev.step] = ev.args;
+      addEv('action', TOOL_LABEL[ev.tool] || 'Called a tool', {tool:ev.tool, time:ev.t, code: Object.entries(ev.args||{}).map(([k,v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`).join('\n')});
+      break;
+    case 'observation': {
+      let cls = 'observation';
+      if(ev.tool === 'check_budget'){
+        const a = S.pending[ev.step] || {}, ok = /^WITHIN/i.test(ev.text);
+        cls += ok ? ' verdict-ok' : ' verdict-over';
+        if(a.total_cost != null) { S.checks.push({total:+a.total_cost, budget:+a.budget, ok}); drawBudget(); }
+      } else phase('observe');
+      addEv(cls, 'Result', {tool:ev.tool, time:ev.t, code:ev.text, fold:true}); break; }
+    case 'final': {
+      phase('answer'); S.final = ev; S.steps = ev.steps;
+      addEv('final', 'Itinerary ready', {time:ev.t});
+      $('#itin').innerHTML = md(ev.text);
+      document.querySelectorAll('.phase').forEach(p => { p.classList.remove('on'); p.classList.add('done'); });
+      const last = S.checks[S.checks.length-1];
+      $('#mTotal').textContent = last ? rs(last.total) : 'See itinerary';
+      $('#mVerdict').innerHTML = last ? (last.ok ? '<span class="pill ok">Within budget</span>' : '<span class="pill over">Over budget</span>')
+        + (S.checks.some(x => !x.ok) && last.ok ? ' after re-planning' : '') : 'Itinerary with cost table';
+      $('#mTools').textContent = ev.tool_calls;
+      $('#mReplan').textContent = S.checks.some(x => !x.ok) ? `Yes, revised ${S.checks.filter(x=>!x.ok).length}×` : 'Yes, when over budget';
+      break; }
+    case 'error':
+      addEv('error', 'Stopped', {time:ev.t, body:ev.text});
+      $('#itin').innerHTML = `<p class="empty">No itinerary, because the agent stopped. ${esc(ev.text)}</p>`;
+      $('#mTotal').textContent = 'Did not finish';
+      break;
+  }
+  counts();
+}
+
+/* ---------- actions ---------- */
+async function runBaseline(goal){
+  try{
+    const r = await (await fetch(API + '/api/baseline', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({goal})})).json();
+    $('#bRule').textContent = r.rule; $('#bTotal').textContent = rs(r.total) + ' vs budget ' + rs(r.budget);
+    const ok = r.total <= r.budget;
+    $('#bVerdict').innerHTML = `<span class="pill ${ok?'ok':'over'}">${ok?'Within budget':'Over budget'}</span>` + (ok ? '' : ' and it stops there');
+  }catch(e){}
+}
+
+async function run(){
+  const goal = $('#goal').value.trim(); if(!goal){ $('#goal').focus(); return; }
+  await checkServer(); if(!ready){ $('#setup').scrollIntoView({behavior:'smooth'}); return; }
+  $('#run').disabled = true; $('#run').textContent = 'Planning…'; reset(); runBaseline(goal);
+  const tick = setInterval(counts, 1000);
+  try{
+    const res = await fetch(API + '/api/run', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({goal})});
+    if(!res.ok){ const j = await res.json().catch(() => ({})); handle({type:'error', text: j.error || `Server error ${res.status}`}); }
+    else {
+      const reader = res.body.getReader(), dec = new TextDecoder(); let buf = '';
+      for(;;){
+        const {value, done} = await reader.read(); if(done) break;
+        buf += dec.decode(value, {stream:true}); let k;
+        while((k = buf.indexOf('\n\n')) >= 0){
+          const chunk = buf.slice(0,k); buf = buf.slice(k+2);
+          if(chunk.startsWith('data: ')){ const ev = JSON.parse(chunk.slice(6)); if(ev.type !== 'done') handle(ev); }
+        }
+      }
+    }
+  }catch(e){
+    handle({type:'error', text:'Lost connection to the agent server. Check that python run.py is still running, then try again.'});
+    checkServer();
+  }
+  clearInterval(tick); counts();
+  $('#run').disabled = false; $('#run').textContent = 'Plan my trip';
+  if($('#logD').open) loadLog(); if($('#memD').open) loadMem();
+}
+
+async function loadLog(){ try{ const t = await (await fetch(API + '/api/logs')).text(); $('#logOut').textContent = t.trim() ? t.trim().split('\n').slice(-80).join('\n') : 'The log is empty. Run the agent first.'; }catch(e){ $('#logOut').textContent = 'Could not reach the server.'; } }
+async function loadMem(){ try{ const m = await (await fetch(API + '/api/memory')).json(); $('#memOut').textContent = Object.keys(m).length ? JSON.stringify(m, null, 2) : 'Nothing saved yet.'; }catch(e){ $('#memOut').textContent = 'Could not reach the server.'; } }
+
+$('#run').onclick = run;
+$('#goal').addEventListener('keydown', e => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)) run(); });
+document.querySelectorAll('.preset').forEach(b => b.onclick = () => { $('#goal').value = b.dataset.g; $('#goal').focus(); });
+$('#logD').addEventListener('toggle', e => e.target.open && loadLog()); $('#logRefresh').onclick = loadLog;
+$('#memD').addEventListener('toggle', e => e.target.open && loadMem()); $('#memRefresh').onclick = loadMem;
+$('#memClear').onclick = async () => { await fetch(API + '/api/memory', {method:'DELETE'}); loadMem(); };
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+Goa sample price list (INR)
+Budget hotel per night (double room): 1800
+Mid-range hotel per night: 3500
+Meal per person per day: 700
+Scooter rental per day: 500
+Water sports package per person: 1500
+Train/bus return per person: 1800
+Cab airport transfer (one way): 900
+Entry tickets, forts/museums per person per day: 150
